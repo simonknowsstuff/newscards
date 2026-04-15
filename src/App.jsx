@@ -7,7 +7,7 @@ import './App.css';
 // Fallback data in case Firebase is empty or fails
 
 
-const CATEGORIES = ['national', 'international', 'business'];
+const CATEGORIES = ['national', 'international', 'business', 'science', 'tech'];
 
 function App() {
   const [activeCategory, setActiveCategory] = useState('national');

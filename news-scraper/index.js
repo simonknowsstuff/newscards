@@ -38,6 +38,16 @@ const SOURCES = [
     name: 'The Hindu - Business',
     url: 'https://www.thehindu.com/business/feeder/default.rss',
     category: 'business'
+  },
+  {
+    name: 'The Hindu - Science',
+    url: 'https://www.thehindu.com/sci-tech/science/feeder/default.rss',
+    category: 'science'
+  },
+  {
+    name: 'The Hindu - Tech',
+    url: 'https://www.thehindu.com/sci-tech/technology/feeder/default.rss',
+    category: 'tech'
   }
 ];
 
@@ -97,10 +107,11 @@ async function run() {
   
   for (const source of SOURCES) {
     const articles = await scrapeFeed(source);
-    allArticles.push(...articles);
+    // Take the top 20 articles from each category to ensure a good mix
+    allArticles.push(...articles.slice(0, 20));
   }
 
-  console.log(`Total articles found: ${allArticles.length}`);
+  console.log(`Total categorized articles to save: ${allArticles.length}`);
 
   if (db) {
     try {
@@ -112,11 +123,11 @@ async function run() {
       // in this "daily/hourly" job, we'll just add new ones or overwrite.
       
       // Let's implement a simple "clear and refill" or "add recent"
-      // Clear old news (optional - depending on how data should persist)
-      const snapshot = await newsCollection.limit(100).get();
+      // Clear old news (limit to 400 to stay within Firestore's 500 operations batch limit)
+      const snapshot = await newsCollection.limit(400).get();
       snapshot.docs.forEach(doc => batch.delete(doc.ref));
 
-      allArticles.slice(0, 50).forEach(article => {
+      allArticles.forEach(article => {
         const docRef = newsCollection.doc();
         batch.set(docRef, {
           ...article,
