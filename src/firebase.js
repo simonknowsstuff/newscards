@@ -15,8 +15,9 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const functions = getFunctions(app);
 
-// Connect to emulators only in development and on localhost
-if (import.meta.env.DEV && (
+// Connect to emulators only if specifically enabled
+// This prevents connection refused errors when the emulator is not running
+if (import.meta.env.DEV && import.meta.env.VITE_USE_FIREBASE_EMULATOR === 'true' && (
   window.location.hostname === "localhost" || 
   window.location.hostname === "127.0.0.1" ||
   window.location.hostname.match(/^192\.168\.\d+\.\d+$/)
