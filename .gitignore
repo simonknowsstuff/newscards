@@ -47,3 +47,4 @@ build/
 .agents/
 .continue/
 .junie/
+service-account.json
