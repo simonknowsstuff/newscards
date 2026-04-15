@@ -17,6 +17,7 @@ function App() {
   
   // Track active index globally so the parent can give the "More Info" button the correct link
   const [activeIndex, setActiveIndex] = useState(0);
+  const [direction, setDirection] = useState('next');
 
   useEffect(() => {
     fetchNews();
@@ -47,6 +48,17 @@ function App() {
   const handleCategoryChange = (cat) => {
     setActiveCategory(cat);
     setActiveIndex(0); // reset position when switching category
+    setDirection('next');
+  };
+
+  const handleNext = () => {
+    setDirection('next');
+    setActiveIndex(prev => prev + 1);
+  };
+
+  const handlePrev = () => {
+    setDirection('prev');
+    setActiveIndex(prev => prev === 0 ? currentCategoryNews.length - 1 : prev - 1);
   };
 
   const currentCategoryNews = news.filter(item => {
@@ -56,8 +68,6 @@ function App() {
   
   // Ensure we wrap for infinite iteration
   const safeIndex = currentCategoryNews.length > 0 ? (Math.abs(activeIndex) % currentCategoryNews.length) : 0;
-  const currentArticle = currentCategoryNews[safeIndex];
-
   return (
     <div className="app-container">
       <header className="header">
@@ -93,18 +103,12 @@ function App() {
         <Deck 
           articles={currentCategoryNews} 
           activeIndex={safeIndex} 
-          onNext={() => setActiveIndex(prev => prev + 1)}
-          onPrev={() => setActiveIndex(prev => prev === 0 ? currentCategoryNews.length - 1 : prev - 1)}
+          direction={direction}
+          onNext={handleNext}
+          onPrev={handlePrev}
         />
       )}
 
-      {currentArticle && (
-        <div className="bottom-bar">
-          <a href={currentArticle.link} target="_blank" rel="noopener noreferrer" className="more-info-btn">
-            More Info
-          </a>
-        </div>
-      )}
     </div>
   );
 }
