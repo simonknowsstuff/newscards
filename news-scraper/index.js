@@ -68,17 +68,7 @@ if (serviceAccount || process.env.GOOGLE_APPLICATION_CREDENTIALS) {
 const db = admin.apps.length ? admin.firestore() : null;
 const parser = new Parser();
 
-const SOURCES = [
-  { name: 'The Hindu - National', url: 'https://www.thehindu.com/news/national/feeder/default.rss', category: 'national' },
-  { name: 'The Hindu - International', url: 'https://www.thehindu.com/news/international/feeder/default.rss', category: 'international' },
-  { name: 'The Hindu - Business', url: 'https://www.thehindu.com/business/feeder/default.rss', category: 'business' },
-  { name: 'The Hindu - Science', url: 'https://www.thehindu.com/sci-tech/science/feeder/default.rss', category: 'science' },
-  { name: 'The Hindu - Tech', url: 'https://www.thehindu.com/sci-tech/technology/feeder/default.rss', category: 'tech' },
-  { name: 'Indian Express - General', url: 'https://indianexpress.com/feed/', category: 'national' },
-  { name: 'Reuters', url: 'https://news.google.com/rss/search?q=site%3Areuters.com&hl=en-US&gl=US&ceid=US%3Aen', category: 'international' },
-  { name: 'NDTV News', url: 'https://feeds.feedburner.com/ndtvnews-top-stories', category: 'national' },
-  { name: 'The Hindu - Sports', url: 'https://www.thehindu.com/sport/feeder/default.rss', category: 'sports' }
-];
+const SOURCES = require('./sources.json');
 
 async function scrapeFeed(source) {
   console.log(`Fetching ${source.name}...`);
@@ -91,7 +81,7 @@ async function scrapeFeed(source) {
       const rawHtml = item.contentSnippet || item.content || "";
       let description = sanitizeHtml(rawHtml, { allowedTags: [], allowedAttributes: {} }).trim();
       let title = (item.title || "").trim();
-      
+
       const sourceSuffixRegex = /\s*[-–—]?\s*Reuters\s*$/i;
       title = title.replace(sourceSuffixRegex, '').trim();
       description = description.replace(sourceSuffixRegex, '').trim();
@@ -218,6 +208,7 @@ async function run() {
   }
 
   console.log("--- News Scraping Job Finished ---");
+  process.exit(0);
 }
 
 run().catch(err => {
