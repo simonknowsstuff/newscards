@@ -36,7 +36,7 @@ jobs:
           force_orphan: true
 
   deploy-firebase:
-    name: Deploy Functions and Firestore
+    name: Deploy Firestore
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
@@ -47,10 +47,6 @@ jobs:
         with:
           node-version: 20
 
-      - name: Install Functions Dependencies
-        working-directory: ./functions
-        run: npm ci
-
       - name: Authenticate with Google Cloud
         uses: google-github-actions/auth@v2
         with:
@@ -59,5 +55,5 @@ jobs:
       - name: Install Firebase CLI
         run: npm install -g firebase-tools
 
-      - name: Deploy Firebase Functions and Firestore
-        run: firebase deploy --only functions,firestore --project newscards-6564e
+      - name: Deploy Firebase Firestore
+        run: firebase deploy --only firestore --project newscards-6564e
