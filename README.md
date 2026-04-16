@@ -5,7 +5,7 @@ This project is more of a personal project that I don't intend to fully make pub
 
 The project consists of three main components:
 - **Frontend**: A React + Vite application for the card-based UI.
-- **Backend**: Firebase Cloud Functions and Firestore for data management.
+- **Backend**: Firestore for data management.
 - **News Scraper**: A standalone Node.js service that scrapes news from RSS feeds and syncs them to Firestore.
 
 ## Project Structure
@@ -13,7 +13,6 @@ The project consists of three main components:
 ```text
 .
 ├── src/                # React frontend source code
-├── functions/          # Firebase Cloud Functions (Backend logic)
 ├── news-scraper/       # Node.js scraper service
 ├── public/             # Static assets
 ├── firebase.json       # Firebase configuration
@@ -33,14 +32,7 @@ cd newscards
 npm install
 ```
 
-### 2. Backend & Functions Setup
-```bash
-cd functions
-npm install
-cd ..
-```
-
-### 3. News Scraper Setup
+### 2. News Scraper Setup
 Detailed instructions can be found in the [News Scraper README](./news-scraper/README.md).
 ```bash
 cd news-scraper
@@ -58,7 +50,7 @@ The project is configured to work with Firebase Emulators for safe local testing
 npm run dev:all
 ```
 This command will:
-- Start the **Firebase Emulators** (Firestore, Functions).
+- Start the **Firebase Emulators** (Firestore).
 - Start the **Vite Dev Server** for the frontend.
 
 ### Individual Commands
@@ -68,9 +60,9 @@ This command will:
 
 ## Deployment
 
-### Frontend & Functions
+### Firestore
 ```bash
-firebase deploy
+firebase deploy --only firestore
 ```
 
 ### News Scraper
