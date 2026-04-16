@@ -11,19 +11,23 @@ body {
   font-family: 'Inter', sans-serif;
   background: #111116;
   color: #fff;
-  min-height: 100vh;
+  height: 100vh;
+  margin: 0;
   display: flex;
   justify-content: center;
   align-items: center;
+  overflow: hidden; /* Prevent page scrolling */
 }
 
 .app-container {
   width: 100%;
   max-width: 900px;
   height: 100vh;
+  height: 100dvh; /* Dynamic viewport height for mobile */
   display: flex;
   flex-direction: column;
-  padding: 2rem 1rem;
+  padding: 1.5rem 1rem;
+  overflow: hidden;
 }
 
 /* Header & Category Picker */
@@ -31,8 +35,9 @@ body {
   display: flex;
   justify-content: center;
   align-items: center;
-  margin-bottom: 3rem;
+  margin-bottom: 2rem;
   padding: 0 1rem;
+  flex-shrink: 0;
 }
 
 
@@ -111,8 +116,9 @@ body {
 
 .card-stack {
   position: relative;
-  width: 320px;
-  height: 480px;
+  width: 400px;
+  height: var(--deck-height, 600px);
+  max-height: calc(100vh - 250px);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -133,7 +139,7 @@ body {
 }
 
 .card-content {
-  padding: 2.5rem 1.5rem;
+  padding: 2rem 1.5rem;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -141,6 +147,11 @@ body {
   text-align: center;
   flex: 1;
   color: #fff;
+  overflow-y: auto; /* Allow internal scrolling for very long text */
+  scrollbar-width: none; /* Hide scrollbar for clean look */
+}
+.card-content::-webkit-scrollbar {
+  display: none;
 }
 
 .full-card {
@@ -162,26 +173,18 @@ body {
 }
 
 .card-title {
-  font-size: 1.6rem;
+  font-size: 1.8rem;
   line-height: 1.3;
   font-weight: 700;
   color: #fff;
-  display: -webkit-box;
-  -webkit-line-clamp: 4; /* Reduced clamp to make room for description */
-  -webkit-box-orient: vertical;  
-  overflow: hidden;
   text-shadow: 0 2px 10px rgba(0,0,0,0.2);
   margin-bottom: 1rem;
 }
 
 .card-description {
-  font-size: 0.9rem;
+  font-size: 1rem;
   line-height: 1.5;
   color: rgba(255, 255, 255, 0.8);
-  display: -webkit-box;
-  -webkit-line-clamp: 5;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
   max-width: 90%;
   margin: 0 auto;
 }
@@ -298,8 +301,9 @@ body {
     font-size: 0.9rem;
   }
   .card-stack {
-    width: 280px;
-    height: 420px;
+    width: 340px;
+    height: var(--deck-height, 510px);
+    max-height: calc(100vh - 280px);
     margin-bottom: 4rem; /* Space for buttons */
   }
   .nav-btn {
@@ -310,10 +314,10 @@ body {
     transform: none;
   }
   .nav-btn.prev {
-    left: calc(50% - 70px);
+    left: calc(50% - 80px);
   }
   .nav-btn.next {
-    right: calc(50% - 70px);
+    right: calc(50% - 80px);
     left: auto;
   }
 }

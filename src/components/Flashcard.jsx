@@ -29,13 +29,16 @@ export default function Flashcard({ article, style, isTop }) {
     background: getGradient(article.id),
   };
 
+  const titleSize = article.title?.length > 80 ? '1.4rem' : article.title?.length > 50 ? '1.6rem' : '1.8rem';
+  const descSize = article.description?.length > 150 ? '0.85rem' : '1rem';
+
   return (
     <div className="flashcard" style={cardStyle}>
       <div className="card-content full-card">
         <span className="card-category">{article.category}</span>
-        <h3 className="card-title">{article.title}</h3>
+        <h3 className="card-title" style={{ fontSize: titleSize }}>{article.title}</h3>
         {article.description && (
-          <p className="card-description">{article.description}</p>
+          <p className="card-description" style={{ fontSize: descSize }}>{article.description}</p>
         )}
         
         <div className="card-spacer"></div>
