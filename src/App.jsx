@@ -14,6 +14,7 @@ function App() {
   const [news, setNews] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [showInfo, setShowInfo] = useState(false);
   
   // Track active index globally so the parent can give the "More Info" button the correct link
   const [activeIndex, setActiveIndex] = useState(0);
@@ -88,18 +89,36 @@ function App() {
 
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (currentCategoryNews.length === 0) return;
-      
-      if (e.key === 'ArrowRight') {
-        handleNext();
-      } else if (e.key === 'ArrowLeft') {
-        handlePrev();
+      // If Shift is held, arrows switch categories
+      if (e.shiftKey) {
+        if (e.key === 'ArrowRight') {
+          e.preventDefault();
+          const currentIndex = CATEGORIES.indexOf(activeCategory);
+          const nextIndex = (currentIndex + 1) % CATEGORIES.length;
+          handleCategoryChange(CATEGORIES[nextIndex]);
+        } else if (e.key === 'ArrowLeft') {
+          e.preventDefault();
+          const currentIndex = CATEGORIES.indexOf(activeCategory);
+          const prevIndex = (currentIndex - 1 + CATEGORIES.length) % CATEGORIES.length;
+          handleCategoryChange(CATEGORIES[prevIndex]);
+        }
+      } else {
+        // Normal arrow behavior for cards
+        if (currentCategoryNews.length === 0) return;
+        if (e.key === 'ArrowRight') {
+          handleNext();
+        } else if (e.key === 'ArrowLeft') {
+          handlePrev();
+        }
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [currentCategoryNews.length]); // Re-bind if news length changes
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [currentCategoryNews.length, activeCategory]); // Re-bind if context changes
 
   // Ensure we wrap for infinite iteration
   const safeIndex = currentCategoryNews.length > 0 ? (Math.abs(activeIndex) % currentCategoryNews.length) : 0;
@@ -166,8 +185,52 @@ function App() {
 
       {lastFetched && (
         <footer className="footer">
-          <p>Latest {activeCategory} news from {lastFetched}</p>
+          <div className="footer-content">
+            <p>Latest {activeCategory} news from {lastFetched}</p>
+            <button className="info-btn" onClick={() => setShowInfo(true)} title="Project Info">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>
+              </svg>
+            </button>
+          </div>
         </footer>
+      )}
+
+      {showInfo && (
+        <div className="modal-overlay" onClick={() => setShowInfo(false)}>
+          <div className="modal-content" onClick={e => e.stopPropagation()}>
+            <button className="modal-close" onClick={() => setShowInfo(false)}>&times;</button>
+            <h2>About Newscards</h2>
+            
+            <div className="modal-section">
+              <h3>Author</h3>
+              <p>Simon</p>
+            </div>
+
+            <div className="modal-section">
+              <h3>Purpose</h3>
+              <p>Designed for a distraction-free, convenient way to read news in a tactile flashcard format.</p>
+            </div>
+
+            <div className="modal-section">
+              <h3>How it works</h3>
+              <p>
+                A background service scrapes news from major RSS feeds and processes them using basic Natural Language Processing (NLP).
+              </p>
+              <p style={{ marginTop: '0.5rem', fontSize: '0.85rem', opacity: 0.8 }}>
+                <strong>Technical Note:</strong> The "Bias" detection uses simplified sentiment analysis (AFINN-165) and keyword-based categorization. Because it relies on word frequency rather than deep semantic understanding, it may occasionally misinterpret nuance, sarcasm, or neutral reporting as biased. Treat the bias scores as experimental indicators rather than absolute facts.
+              </p>
+            </div>
+
+            <div className="modal-section">
+              <h3>Quick Keybinds</h3>
+              <ul>
+                <li><strong>← / →</strong> Navigate cards</li>
+                <li><strong>Shift + ← / →</strong> Switch categories</li>
+              </ul>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
