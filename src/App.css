@@ -147,7 +147,7 @@ body {
   text-align: center;
   flex: 1;
   color: #fff;
-  overflow-y: auto; /* Allow internal scrolling for very long text */
+  overflow-y: auto; /* Allow internal scrolling if title is very long */
   scrollbar-width: none; /* Hide scrollbar for clean look */
 }
 .card-content::-webkit-scrollbar {
@@ -187,6 +187,11 @@ body {
   color: rgba(255, 255, 255, 0.8);
   max-width: 90%;
   margin: 0 auto;
+  display: -webkit-box;
+  -webkit-line-clamp: 5;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .card-bias {
