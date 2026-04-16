@@ -19,9 +19,14 @@ function App() {
   const [activeIndex, setActiveIndex] = useState(0);
   const [direction, setDirection] = useState('next');
 
-  useEffect(() => {
-    fetchNews();
-  }, []);
+  const currentCategoryNews = news.filter(item => {
+    // Normalizing to lowercase to match the button categories
+    return item.category && item.category.toLowerCase() === activeCategory;
+  });
+  
+  const lastFetched = currentCategoryNews.length > 0 
+    ? new Date(Math.max(...currentCategoryNews.map(a => a.pubDate ? new Date(a.pubDate).getTime() : 0))).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })
+    : null;
 
   const fetchNews = async () => {
     setLoading(true);
@@ -30,7 +35,23 @@ function App() {
       const newsQuery = query(collection(db, 'news'));
       const snapshot = await getDocs(newsQuery);
       
-      let fetchedNews = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      let fetchedNews = snapshot.docs.map(doc => {
+        const data = doc.data();
+        let title = data.title || '';
+        let description = data.description || '';
+        
+        // Filter out trailing "Reuters" found in existing data
+        const reutersRegex = /\s*[-–—]?\s*Reuters\s*$/i;
+        if (title) title = title.replace(reutersRegex, '').trim();
+        if (description) description = description.replace(reutersRegex, '').trim();
+
+        return { 
+          id: doc.id, 
+          ...data,
+          title,
+          description
+        };
+      });
       
       if (fetchedNews.length === 0) {
         setError('No news articles found. Please check back later.');
@@ -61,11 +82,25 @@ function App() {
     setActiveIndex(prev => prev === 0 ? currentCategoryNews.length - 1 : prev - 1);
   };
 
-  const currentCategoryNews = news.filter(item => {
-    // Normalizing to lowercase to match the button categories
-    return item.category && item.category.toLowerCase() === activeCategory;
-  });
-  
+  useEffect(() => {
+    fetchNews();
+  }, []);
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (currentCategoryNews.length === 0) return;
+      
+      if (e.key === 'ArrowRight') {
+        handleNext();
+      } else if (e.key === 'ArrowLeft') {
+        handlePrev();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [currentCategoryNews.length]); // Re-bind if news length changes
+
   // Ensure we wrap for infinite iteration
   const safeIndex = currentCategoryNews.length > 0 ? (Math.abs(activeIndex) % currentCategoryNews.length) : 0;
   return (
@@ -109,6 +144,31 @@ function App() {
         />
       )}
 
+      {(() => {
+        const article = currentCategoryNews[safeIndex];
+        if (!article || typeof article.biasScore === 'undefined') return null;
+        const absScore = Math.abs(article.biasScore);
+        if (absScore <= 0.5) return null;
+
+        const isRight = article.biasScore > 0;
+        const biasType = absScore > 1.5 ? (isRight ? 'Strongly Right-leaning' : 'Strongly Left-leaning') : (isRight ? 'Right-leaning' : 'Left-leaning');
+        const biasDesc = isRight ? 'This article may favor conservative or traditional perspectives.' : 'This article may favor liberal or progressive perspectives.';
+        
+        return (
+          <div className={`bias-info-box ${isRight ? 'right' : 'left'}`}>
+            <div className="bias-type">
+              {biasType} <span className="bias-score-value">({article.biasScore})</span>
+            </div>
+            <div className="bias-description">{biasDesc}</div>
+          </div>
+        );
+      })()}
+
+      {lastFetched && (
+        <footer className="footer">
+          <p>Latest {activeCategory} news from {lastFetched}</p>
+        </footer>
+      )}
     </div>
   );
 }

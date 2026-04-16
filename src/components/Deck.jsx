@@ -29,7 +29,7 @@ export default function Deck({ articles, activeIndex, onNext, onPrev, direction 
   useEffect(() => {
     if (measurementRef.current && articles.length > 0) {
       const isMobile = window.innerWidth <= 600;
-      let maxHeight = isMobile ? 510 : 600; // Base height to maintain 2:3 ratio
+      let maxHeight = isMobile ? 340 : 400; // Base height to maintain square ratio
       
       const vh = window.innerHeight;
       const limit = isMobile ? vh - 280 : vh - 250;
@@ -189,6 +189,8 @@ export default function Deck({ articles, activeIndex, onNext, onPrev, direction 
       </div>
 
       <button className="nav-btn next" onClick={onNext}>&#8594;</button>
+
+      {/* Bias Info Overlay - Moved to App.jsx for better layout flow */}
     </div>
   );
 }

@@ -35,7 +35,6 @@ export default function Flashcard({ article, style, isTop }) {
   return (
     <div className="flashcard" style={cardStyle}>
       <div className="card-content full-card">
-        <span className="card-category">{article.category}</span>
         <h3 className="card-title" style={{ fontSize: titleSize }}>{article.title}</h3>
         {article.description && (
           <p className="card-description" style={{ fontSize: descSize }}>{article.description}</p>
@@ -49,16 +48,16 @@ export default function Flashcard({ article, style, isTop }) {
             target="_blank" 
             rel="noopener noreferrer" 
             className="more-info-btn inverse"
-            style={{ pointerEvents: isTop ? 'auto' : 'none' }}
+            style={{ 
+              pointerEvents: isTop ? 'auto' : 'none',
+              backgroundColor: article.biasScore > 0.5 ? '#60a5fa' : article.biasScore < -0.5 ? '#f87171' : 'rgba(255, 255, 255, 0.2)',
+              color: (article.biasScore > 0.5 || article.biasScore < -0.5) ? '#111' : '#fff',
+              borderColor: (article.biasScore > 0.5 || article.biasScore < -0.5) ? 'transparent' : 'rgba(255, 255, 255, 0.3)'
+            }}
           >
             More Info
           </a>
         </div>
-        {article.pubDate && (
-          <div className="card-date white">
-            Published: {new Date(article.pubDate).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })}
-          </div>
-        )}
       </div>
     </div>
   );

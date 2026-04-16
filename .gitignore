@@ -47,4 +47,7 @@ build/
 .agents/
 .continue/
 .junie/
-service-account.json
+
+# News scraper
+news-scraper/service-account.json
+news-scraper/data/
