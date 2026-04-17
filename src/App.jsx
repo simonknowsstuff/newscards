@@ -15,7 +15,7 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showInfo, setShowInfo] = useState(false);
-  
+
   // Track active index globally so the parent can give the "More Info" button the correct link
   const [activeIndex, setActiveIndex] = useState(0);
   const [direction, setDirection] = useState('next');
@@ -24,8 +24,8 @@ function App() {
     // Normalizing to lowercase to match the button categories
     return item.category && item.category.toLowerCase() === activeCategory;
   });
-  
-  const lastFetched = currentCategoryNews.length > 0 
+
+  const lastFetched = currentCategoryNews.length > 0
     ? new Date(Math.max(...currentCategoryNews.map(a => a.pubDate ? new Date(a.pubDate).getTime() : 0))).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })
     : null;
 
@@ -35,25 +35,25 @@ function App() {
     try {
       const newsQuery = query(collection(db, 'news'));
       const snapshot = await getDocs(newsQuery);
-      
+
       let fetchedNews = snapshot.docs.map(doc => {
         const data = doc.data();
         let title = data.title || '';
         let description = data.description || '';
-        
+
         // Filter out trailing "Reuters" found in existing data
         const reutersRegex = /\s*[-–—]?\s*Reuters\s*$/i;
         if (title) title = title.replace(reutersRegex, '').trim();
         if (description) description = description.replace(reutersRegex, '').trim();
 
-        return { 
-          id: doc.id, 
+        return {
+          id: doc.id,
           ...data,
           title,
           description
         };
       });
-      
+
       if (fetchedNews.length === 0) {
         setError('No news articles found. Please check back later.');
       } else {
@@ -66,7 +66,7 @@ function App() {
       setLoading(false);
     }
   };
-  
+
   const handleCategoryChange = (cat) => {
     setActiveCategory(cat);
     setActiveIndex(0); // reset position when switching category
@@ -109,6 +109,8 @@ function App() {
           handleNext();
         } else if (e.key === 'ArrowLeft') {
           handlePrev();
+        } else if (e.key.toLowerCase() === 'i') {
+          setShowInfo(prev => !prev);
         }
       }
     };
@@ -128,8 +130,8 @@ function App() {
 
         <div className="category-picker">
           {CATEGORIES.map(cat => (
-            <button 
-              key={cat} 
+            <button
+              key={cat}
               className={`category-btn ${activeCategory === cat ? 'active' : ''}`}
               onClick={() => handleCategoryChange(cat)}
             >
@@ -154,9 +156,9 @@ function App() {
           <p>No news in the <strong>{activeCategory}</strong> category today.</p>
         </div>
       ) : (
-        <Deck 
-          articles={currentCategoryNews} 
-          activeIndex={safeIndex} 
+        <Deck
+          articles={currentCategoryNews}
+          activeIndex={safeIndex}
           direction={direction}
           onNext={handleNext}
           onPrev={handlePrev}
@@ -172,7 +174,7 @@ function App() {
         const isRight = article.biasScore > 0;
         const biasType = absScore > 1.5 ? (isRight ? 'Strongly Right-leaning' : 'Strongly Left-leaning') : (isRight ? 'Right-leaning' : 'Left-leaning');
         const biasDesc = isRight ? 'This article may favor conservative or traditional perspectives.' : 'This article may favor liberal or progressive perspectives.';
-        
+
         return (
           <div className={`bias-info-box ${isRight ? 'right' : 'left'}`}>
             <div className="bias-type">
@@ -189,7 +191,7 @@ function App() {
             <p>Latest {activeCategory} news from {lastFetched}</p>
             <button className="info-btn" onClick={() => setShowInfo(true)} title="Project Info">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>
+                <circle cx="12" cy="12" r="10" /><line x1="12" y1="16" x2="12" y2="12" /><line x1="12" y1="8" x2="12.01" y2="8" />
               </svg>
             </button>
           </div>
@@ -201,11 +203,6 @@ function App() {
           <div className="modal-content" onClick={e => e.stopPropagation()}>
             <button className="modal-close" onClick={() => setShowInfo(false)}>&times;</button>
             <h2>About Newscards</h2>
-            
-            <div className="modal-section">
-              <h3>Author</h3>
-              <p>Simon</p>
-            </div>
 
             <div className="modal-section">
               <h3>Purpose</h3>
@@ -227,7 +224,12 @@ function App() {
               <ul>
                 <li><strong>← / →</strong> Navigate cards</li>
                 <li><strong>Shift + ← / →</strong> Switch categories</li>
+                <li><strong>i</strong> Toggle this info box</li>
               </ul>
+            </div>
+
+            <div className="modal-section modal-footer">
+              <p>Made with love by <a href="https://github.com/simonknowsstuff" target="_blank" rel="noopener noreferrer">simonknowsstuff</a> &lt;3</p>
             </div>
           </div>
         </div>

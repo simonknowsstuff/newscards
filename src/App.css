@@ -440,6 +440,32 @@ body {
   margin-bottom: 1.5rem;
 }
 
+.modal-footer {
+  text-align: center;
+  margin-top: 2rem !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  padding-top: 1.5rem;
+  margin-bottom: 0;
+}
+
+.modal-footer p {
+  font-size: 0.8rem !important;
+  color: rgba(255, 255, 255, 0.5) !important;
+}
+
+.modal-footer a {
+  color: #fff;
+  text-decoration: none;
+  font-weight: 600;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+  transition: all 0.2s ease;
+}
+
+.modal-footer a:hover {
+  border-bottom-color: #fff;
+  color: #60a5fa;
+}
+
 .modal-section h3 {
   font-size: 0.8rem;
   text-transform: uppercase;

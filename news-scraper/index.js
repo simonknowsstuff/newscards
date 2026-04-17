@@ -5,7 +5,7 @@ const sanitizeHtml = require('sanitize-html');
 const Sentiment = require('sentiment');
 const fs = require('fs');
 const path = require('path');
-require('dotenv').config();
+require('dotenv').config({ path: path.join(__dirname, '.env') });
 
 // Initialize NLP Modules
 const sentiment = new Sentiment();
@@ -53,9 +53,11 @@ class CategoryClassifier {
 const classifier = new CategoryClassifier();
 
 // Initialize Firebase Admin
-const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT_PATH
-  ? require(process.env.FIREBASE_SERVICE_ACCOUNT_PATH)
-  : null;
+let serviceAccountPath = process.env.FIREBASE_SERVICE_ACCOUNT_PATH;
+if (serviceAccountPath && !path.isAbsolute(serviceAccountPath)) {
+  serviceAccountPath = path.resolve(__dirname, serviceAccountPath);
+}
+const serviceAccount = serviceAccountPath ? require(serviceAccountPath) : null;
 
 if (serviceAccount || process.env.GOOGLE_APPLICATION_CREDENTIALS) {
   admin.initializeApp({
@@ -101,11 +103,21 @@ async function scrapeFeed(source) {
         continue;
       }
 
+      // 4. Date Filter: Only current day's news (UTC-based for consistency with file naming)
+      const todayStr = new Date().toISOString().split('T')[0];
+      const pubDate = item.pubDate ? new Date(item.pubDate) : new Date();
+      const pubDateStr = pubDate.toISOString().split('T')[0];
+
+      if (pubDateStr < todayStr) {
+        // Silent filter for old news
+        continue;
+      }
+
       parsedArticles.push({
         title,
         link: item.link,
         description,
-        pubDate: item.pubDate || new Date().toISOString(),
+        pubDate: pubDate.toISOString(),
         source: source.name.split(' - ')[0],
         category: predictedCategory,
         biasScore: biasScore
