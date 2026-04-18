@@ -7,16 +7,21 @@
   padding: 0;
 }
 
+html,
 body {
   font-family: 'Inter', sans-serif;
   background: #111116;
   color: #fff;
-  height: 100vh;
+  min-height: 100vh;
+  min-height: 100dvh;
   margin: 0;
   display: flex;
   justify-content: center;
   align-items: center;
   overflow: hidden; /* Prevent page scrolling */
+  /* Prevent touch delay and overscroll on mobile */
+  touch-action: pan-x pan-y;
+  overscroll-behavior: none;
 }
 
 .app-container {
@@ -26,8 +31,13 @@ body {
   height: 100dvh; /* Dynamic viewport height for mobile */
   display: flex;
   flex-direction: column;
-  padding: 1.5rem 1rem;
+  /* Support for safe areas (notches, home bars) */
+  padding: calc(1.5rem + env(safe-area-inset-top, 0px)) 
+           calc(1rem + env(safe-area-inset-right, 0px)) 
+           calc(1.5rem + env(safe-area-inset-bottom, 0px)) 
+           calc(1rem + env(safe-area-inset-left, 0px));
   overflow: hidden;
+  position: relative; /* Base for absolute positioned bias info */
 }
 
 /* Header & Category Picker */
@@ -308,7 +318,10 @@ body {
 
 @media (max-width: 600px) {
   .app-container {
-    padding: 0.5rem 1rem 1rem 1rem;
+    padding: calc(0.5rem + env(safe-area-inset-top, 0px)) 
+             calc(1rem + env(safe-area-inset-right, 0px)) 
+             calc(1rem + env(safe-area-inset-bottom, 0px)) 
+             calc(1rem + env(safe-area-inset-left, 0px));
   }
   .header {
     margin-bottom: 1rem;
@@ -324,17 +337,20 @@ body {
     margin-bottom: 3rem; /* Space for buttons */
   }
   .nav-btn {
-    width: 50px;
-    height: 50px;
-    top: auto;
-    bottom: 1rem;
-    transform: none;
+    width: 44px;
+    height: 44px;
+    top: 50%;
+    bottom: auto;
+    transform: translateY(-50%);
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
   }
   .nav-btn.prev {
-    left: calc(50% - 80px);
+    left: 10px;
   }
   .nav-btn.next {
-    right: calc(50% - 80px);
+    right: 10px;
     left: auto;
   }
 }
@@ -504,19 +520,27 @@ body {
 }
 
 .bias-info-box {
-  position: relative;
-  margin: 1rem auto;
+  position: absolute;
+  bottom: 80px; /* Above footer but overlaying card area/bottom */
+  left: 50%;
+  transform: translateX(-50%);
   width: 90%;
   max-width: 400px;
-  background: rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(5px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 12px;
-  padding: 0.8rem;
+  background: rgba(26, 26, 32, 0.9); /* More opaque to overlay clearly */
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 16px;
+  padding: 1rem;
   text-align: center;
-  z-index: 50;
-  animation: fadeIn 0.3s ease-out;
+  z-index: 150; /* Higher than card stack and nav buttons */
+  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+  animation: biasFadeUp 0.3s ease-out;
   flex-shrink: 0;
+}
+
+@keyframes biasFadeUp {
+  from { opacity: 0; transform: translate(-50%, 20px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
 }
 
 .bias-info-box.right {
@@ -557,7 +581,35 @@ body {
 @media (max-width: 600px) {
   .bias-info-box {
     max-width: 320px;
-    padding: 0.6rem;
-    margin: 0.5rem auto;
+    padding: 0.8rem;
+    bottom: 70px; /* Adjusted for mobile footer */
+  }
+
+  /* Info Modal Mobile Adjustments */
+  .modal-content {
+    padding: 1.8rem 1.2rem;
+    max-height: 85vh;
+    overflow-y: auto;
+    border-radius: 20px;
+    width: 92%;
+  }
+  .modal-close {
+    top: 0.8rem;
+    right: 0.8rem;
+    font-size: 1.8rem;
+  }
+  .modal-content h2 {
+    font-size: 1.3rem;
+    margin-bottom: 1.2rem;
+  }
+  .modal-section h3 {
+    font-size: 0.75rem;
+  }
+  .modal-section p, .modal-section li {
+    font-size: 0.85rem;
+  }
+  .modal-footer {
+    margin-top: 1.5rem !important;
+    padding-top: 1.2rem;
   }
 }

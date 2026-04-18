@@ -4,7 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "vite --host",
     "emulators": "firebase emulators:start",
     "dev:all": "concurrently \"npm run emulators\" \"npm run dev\"",
     "build": "vite build",
