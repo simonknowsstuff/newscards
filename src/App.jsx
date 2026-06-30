@@ -1,56 +1,81 @@
-import React, { useState, useEffect } from 'react';
-import { collection, query, getDocs } from 'firebase/firestore';
-import { db } from './firebase';
+import React, { useState, useEffect, useCallback } from 'react';
+import { supabase } from './supabase';
 import Deck from './components/Deck';
+import StoryExpander from './components/StoryExpander';
 import './App.css';
 
-// Fallback data in case Firebase is empty or fails
-
-
-const CATEGORIES = ['national', 'international', 'business', 'science', 'tech', 'sports'];
+const CATEGORIES = ['national', 'international', 'business', 'science', 'tech', 'sports', 'entertainment'];
 
 function App() {
   const [activeCategory, setActiveCategory] = useState('national');
   const [news, setNews] = useState([]);
+  const [stories, setStories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showInfo, setShowInfo] = useState(false);
-
-  // Track active index globally so the parent can give the "More Info" button the correct link
+  const [trendingMode, setTrendingMode] = useState(false);
+  const [expandedStory, setExpandedStory] = useState(null);
+  const [expandedArticles, setExpandedArticles] = useState([]);
   const [activeIndex, setActiveIndex] = useState(0);
   const [direction, setDirection] = useState('next');
 
-  const currentCategoryNews = news.filter(item => {
-    // Normalizing to lowercase to match the button categories
+  // Get articles for the current category
+  let currentCategoryNews = news.filter(item => {
     return item.category && item.category.toLowerCase() === activeCategory;
   });
 
-  const lastFetched = currentCategoryNews.length > 0
-    ? new Date(Math.max(...currentCategoryNews.map(a => a.pubDate ? new Date(a.pubDate).getTime() : 0))).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })
-    : null;
+  // In trending mode: deduplicate by story, show only representative articles, sorted by trend score
+  if (trendingMode && stories.length > 0) {
+    const categoryStories = stories
+      .filter(s => s.category === activeCategory)
+      .sort((a, b) => b.trend_score - a.trend_score);
+
+    const deduped = [];
+    const seenStoryIds = new Set();
+
+    for (const story of categoryStories) {
+      if (seenStoryIds.has(story.id)) continue;
+      seenStoryIds.add(story.id);
+      const rep = currentCategoryNews.find(a => a.story_id === story.id);
+      if (rep) deduped.push(rep);
+    }
+
+    const unclusteredArticles = currentCategoryNews.filter(a => !a.story_id);
+    currentCategoryNews = [...deduped, ...unclusteredArticles];
+  }
 
   const fetchNews = async () => {
     setLoading(true);
     setError(null);
     try {
-      const newsQuery = query(collection(db, 'news'));
-      const snapshot = await getDocs(newsQuery);
+      const { data: rows, error: fetchError } = await supabase
+        .from('news')
+        .select('*');
 
-      let fetchedNews = snapshot.docs.map(doc => {
-        const data = doc.data();
-        let title = data.title || '';
-        let description = data.description || '';
+      if (fetchError) throw fetchError;
 
-        // Filter out trailing "Reuters" found in existing data
+      let fetchedNews = rows.map(row => {
+        let title = row.title || '';
+        let description = row.description || '';
+
         const reutersRegex = /\s*[-–—]?\s*Reuters\s*$/i;
         if (title) title = title.replace(reutersRegex, '').trim();
         if (description) description = description.replace(reutersRegex, '').trim();
 
         return {
-          id: doc.id,
-          ...data,
+          id: row.id,
           title,
-          description
+          description,
+          link: row.link,
+          pubDate: row.pub_date,
+          source: row.source,
+          category: row.category,
+          biasScore: row.bias_score,
+          sensationalismScore: row.sensationalism_score,
+          sensationalismLabel: row.sensationalism_label,
+          politicalLeanScore: row.political_lean_score,
+          politicalLeanLabel: row.political_lean_label,
+          story_id: row.story_id || null
         };
       });
 
@@ -59,29 +84,64 @@ function App() {
       } else {
         setNews(fetchedNews);
       }
+
+      // Fetch stories (gracefully handle if table doesn't exist yet)
+      try {
+        const { data: storyRows, error: storyError } = await supabase
+          .from('stories')
+          .select('*');
+
+        if (!storyError && storyRows) {
+          setStories(storyRows);
+        }
+      } catch (e) {
+        console.warn('Stories table not available yet:', e.message);
+      }
+
     } catch (err) {
-      console.error('Error fetching from Firestore:', err);
+      console.error('Error fetching from Supabase:', err);
       setError('Failed to load news. Please try again later.');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleCategoryChange = (cat) => {
+  const handleCategoryChange = useCallback((cat) => {
     setActiveCategory(cat);
-    setActiveIndex(0); // reset position when switching category
+    setActiveIndex(0);
     setDirection('next');
-  };
+  }, []);
 
-  const handleNext = () => {
+  const handleNext = useCallback(() => {
     setDirection('next');
-    setActiveIndex(prev => prev + 1);
-  };
+    setActiveIndex(prev => {
+      const len = currentCategoryNews.length;
+      return len > 0 ? (prev + 1) % len : 0;
+    });
+  }, [currentCategoryNews.length]);
 
-  const handlePrev = () => {
+  const handlePrev = useCallback(() => {
     setDirection('prev');
-    setActiveIndex(prev => prev === 0 ? currentCategoryNews.length - 1 : prev - 1);
-  };
+    setActiveIndex(prev => {
+      const len = currentCategoryNews.length;
+      return len > 0 ? (prev - 1 + len) % len : 0;
+    });
+  }, [currentCategoryNews.length]);
+
+  const handleExpandStory = useCallback((article) => {
+    if (!article || !article.story_id) return;
+    const story = stories.find(s => s.id === article.story_id);
+    if (!story) return;
+
+    const storyArticles = news.filter(a => a.story_id === article.story_id);
+    setExpandedStory(story);
+    setExpandedArticles(storyArticles);
+  }, [stories, news]);
+
+  const handleCloseExpander = useCallback(() => {
+    setExpandedStory(null);
+    setExpandedArticles([]);
+  }, []);
 
   useEffect(() => {
     fetchNews();
@@ -89,7 +149,16 @@ function App() {
 
   useEffect(() => {
     const handleKeyDown = (e) => {
-      // If Shift is held, arrows switch categories
+      if (e.key === 'Escape' && expandedStory) {
+        handleCloseExpander();
+        return;
+      }
+
+      if (e.key === 'Escape' && showInfo) {
+        setShowInfo(false);
+        return;
+      }
+
       if (e.shiftKey) {
         if (e.key === 'ArrowRight') {
           e.preventDefault();
@@ -103,7 +172,6 @@ function App() {
           handleCategoryChange(CATEGORIES[prevIndex]);
         }
       } else {
-        // Normal arrow behavior for cards
         if (currentCategoryNews.length === 0) return;
         if (e.key === 'ArrowRight') {
           handleNext();
@@ -111,93 +179,163 @@ function App() {
           handlePrev();
         } else if (e.key.toLowerCase() === 'i') {
           setShowInfo(prev => !prev);
+        } else if (e.key.toLowerCase() === 't') {
+          setTrendingMode(prev => !prev);
+          setActiveIndex(0);
         }
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [currentCategoryNews.length, activeCategory, expandedStory, showInfo, handleCategoryChange, handleNext, handlePrev, handleCloseExpander]);
 
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [currentCategoryNews.length, activeCategory]); // Re-bind if context changes
+  // Safe modular index
+  const safeIndex = currentCategoryNews.length > 0
+    ? ((activeIndex % currentCategoryNews.length) + currentCategoryNews.length) % currentCategoryNews.length
+    : 0;
 
-  // Ensure we wrap for infinite iteration
-  const safeIndex = currentCategoryNews.length > 0 ? (Math.abs(activeIndex) % currentCategoryNews.length) : 0;
+  // Trending count
+  const trendingCount = stories.filter(s => s.category === activeCategory && s.source_count > 1).length;
+
+  // Progress
+  const progressPct = currentCategoryNews.length > 1
+    ? (safeIndex / (currentCategoryNews.length - 1)) * 100
+    : 0;
+
+  // ── Bottom bar metadata (derived from current article) ──
+  const currentArticle = currentCategoryNews.length > 0 ? currentCategoryNews[safeIndex] : null;
+
+  // Date has been moved to Flashcard.jsx
+
+  const biasLabel = (() => {
+    if (!currentArticle?.politicalLeanLabel) return null;
+    const l = currentArticle.politicalLeanLabel;
+    if (l === 'left-leaning') return 'L';
+    if (l === 'right-leaning') return 'R';
+    return 'N';
+  })();
+
+  const currentSourceCount = (() => {
+    if (!stories?.length || !currentArticle?.story_id) return 1;
+    const story = stories.find(s => s.id === currentArticle.story_id);
+    return story ? story.source_count : 1;
+  })();
+
+  const showNav = !loading && !error && currentCategoryNews.length > 0;
+
   return (
     <div className="app-container">
-      <header className="header">
-
-        <div className="category-picker">
+      {/* ── TOP BAR: Classifications ── */}
+      <div className="top-bar">
+        <div className="top-bar-inner">
+          <div className="pub-logo" onClick={() => handleCategoryChange('national')}>
+            News<em>cards</em>
+          </div>
+          <div className="logo-divider"></div>
           {CATEGORIES.map(cat => (
             <button
               key={cat}
-              className={`category-btn ${activeCategory === cat ? 'active' : ''}`}
+              className={`cat-btn ${activeCategory === cat ? 'active' : ''}`}
               onClick={() => handleCategoryChange(cat)}
             >
               {cat}
             </button>
           ))}
-        </div>
-      </header>
-
-      {loading ? (
-        <div className="loading-state">
-          <div className="spinner"></div>
-          <p>Fetching latest news...</p>
-        </div>
-      ) : error ? (
-        <div className="error-state">
-          <p>{error}</p>
-          <button className="retry-btn" onClick={fetchNews}>Retry</button>
-        </div>
-      ) : currentCategoryNews.length === 0 ? (
-        <div className="empty-state">
-          <p>No news in the <strong>{activeCategory}</strong> category today.</p>
-        </div>
-      ) : (
-        <Deck
-          articles={currentCategoryNews}
-          activeIndex={safeIndex}
-          direction={direction}
-          onNext={handleNext}
-          onPrev={handlePrev}
-        />
-      )}
-
-      {(() => {
-        const article = currentCategoryNews[safeIndex];
-        if (!article || typeof article.biasScore === 'undefined') return null;
-        const absScore = Math.abs(article.biasScore);
-        if (absScore <= 0.5) return null;
-
-        const isRight = article.biasScore > 0;
-        const biasType = absScore > 1.5 ? (isRight ? 'Strongly Right-leaning' : 'Strongly Left-leaning') : (isRight ? 'Right-leaning' : 'Left-leaning');
-        const biasDesc = isRight ? 'This article may favor conservative or traditional perspectives.' : 'This article may favor liberal or progressive perspectives.';
-
-        return (
-          <div className={`bias-info-box ${isRight ? 'right' : 'left'}`}>
-            <div className="bias-type">
-              {biasType} <span className="bias-score-value">({article.biasScore})</span>
-            </div>
-            <div className="bias-description">{biasDesc}</div>
-          </div>
-        );
-      })()}
-
-      {lastFetched && (
-        <footer className="footer">
-          <div className="footer-content">
-            <p>Latest {activeCategory} news from {lastFetched}</p>
-            <button className="info-btn" onClick={() => setShowInfo(true)} title="Project Info">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="10" /><line x1="12" y1="16" x2="12" y2="12" /><line x1="12" y1="8" x2="12.01" y2="8" />
-              </svg>
+          {trendingCount > 0 && (
+            <button
+              className={`cat-btn trending ${trendingMode ? 'active' : ''}`}
+              onClick={() => { setTrendingMode(prev => !prev); setActiveIndex(0); }}
+              title="Show trending stories (T)"
+            >
+              ↗ Trending
+              {!trendingMode && <span className="trend-count">{trendingCount}</span>}
             </button>
-          </div>
-        </footer>
-      )}
+          )}
+        </div>
+      </div>
 
+      {/* ── MAIN: [Prev] [Card] [Next] ── */}
+      <div className="main-content">
+        {showNav && (
+          <button className="side-nav side-prev" onClick={handlePrev} aria-label="Previous article">
+            ←
+          </button>
+        )}
+
+        <div className={`center-stage ${!showNav ? 'center-stage--full' : ''}`}>
+          {loading ? (
+            <div className="loading-state">
+              <div className="spinner"></div>
+              <p>Fetching latest news...</p>
+            </div>
+          ) : error ? (
+            <div className="error-state">
+              <p>{error}</p>
+              <button className="retry-btn" onClick={fetchNews}>Retry</button>
+            </div>
+          ) : currentCategoryNews.length === 0 ? (
+            <div className="empty-state">
+              <p>No news in the <strong>{activeCategory}</strong> category today.</p>
+            </div>
+          ) : (
+            <Deck
+              articles={currentCategoryNews}
+              activeIndex={safeIndex}
+              direction={direction}
+              onNext={handleNext}
+              onPrev={handlePrev}
+            />
+          )}
+        </div>
+
+        {showNav && (
+          <button className="side-nav side-next" onClick={handleNext} aria-label="Next article">
+            →
+          </button>
+        )}
+      </div>
+
+      {/* ── BOTTOM BAR ── */}
+      <div className="bottom-bar">
+        <div className="bottom-left">
+        </div>
+        <div className="bottom-center">
+          {showNav && (
+            <>
+              {currentArticle?.link && (
+                <a
+                  href={currentArticle.link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="more-info-link"
+                >
+                  More Info →
+                </a>
+              )}
+              {currentSourceCount > 1 && (
+                <button
+                  className="perspectives-link"
+                  onClick={() => handleExpandStory(currentArticle)}
+                >
+                  {currentSourceCount} Perspectives
+                </button>
+              )}
+              <div className="bottom-progress">
+                <div className="progress-track">
+                  <div className="progress-fill" style={{ width: `${progressPct}%` }}></div>
+                </div>
+                <span className="progress-label">{safeIndex + 1} / {currentCategoryNews.length}</span>
+              </div>
+            </>
+          )}
+        </div>
+        <div className="bottom-right">
+          <button className="about-btn" onClick={() => setShowInfo(true)}>About</button>
+        </div>
+      </div>
+
+      {/* ── INFO MODAL ── */}
       {showInfo && (
         <div className="modal-overlay" onClick={() => setShowInfo(false)}>
           <div className="modal-content" onClick={e => e.stopPropagation()}>
@@ -213,9 +351,13 @@ function App() {
               <h3>How it works</h3>
               <p>
                 A background service scrapes news from major RSS feeds and processes them using basic Natural Language Processing (NLP).
+                Articles are automatically clustered into stories using TF-IDF similarity — so you can see the same event from multiple perspectives.
               </p>
               <p style={{ marginTop: '0.5rem', fontSize: '0.85rem', opacity: 0.8 }}>
-                <strong>Technical Note:</strong> The "Bias" detection uses simplified sentiment analysis (AFINN-165) and keyword-based categorization. Because it relies on word frequency rather than deep semantic understanding, it may occasionally misinterpret nuance, sarcasm, or neutral reporting as biased. Treat the bias scores as experimental indicators rather than absolute facts.
+                <strong>Technical Note:</strong> The "Sensationalism" detection uses a Naive Bayes classifier trained on ~38,000 headlines to identify clickbait and emotionally exaggerated language. It runs 100% offline via a custom Supabase Edge Function without relying on third-party LLM APIs.
+              </p>
+              <p style={{ marginTop: '0.5rem', fontSize: '0.85rem', opacity: 0.8 }}>
+                <strong>Political Lean:</strong> The "May lean left/right" indicator is source-heavy — it primarily uses each outlet's known editorial position from established media bias charts, with a minor secondary signal from unambiguous political framing keywords. It skips tech, science, sports, and entertainment entirely.
               </p>
             </div>
 
@@ -224,7 +366,9 @@ function App() {
               <ul>
                 <li><strong>← / →</strong> Navigate cards</li>
                 <li><strong>Shift + ← / →</strong> Switch categories</li>
+                <li><strong>t</strong> Toggle trending mode</li>
                 <li><strong>i</strong> Toggle this info box</li>
+                <li><strong>Esc</strong> Close panels</li>
               </ul>
             </div>
 
@@ -233,6 +377,15 @@ function App() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* ── STORY EXPANDER ── */}
+      {expandedStory && (
+        <StoryExpander
+          story={expandedStory}
+          articles={expandedArticles}
+          onClose={handleCloseExpander}
+        />
       )}
     </div>
   );

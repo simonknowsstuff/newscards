@@ -1,64 +1,73 @@
 import React from 'react';
 
-export default function Flashcard({ article, style, isTop }) {
-  // Generate a stable gradient based on the article ID
-  const getGradient = (id = 'default') => {
-    const colors = [
-      ['#FF3CAC', '#784BA0', '#2B86C5'],
-      ['#00DBDE', '#FC00FF'],
-      ['#f093fb', '#f5576c'],
-      ['#667eea', '#764ba2'],
-      ['#2af598', '#009efd'],
-      ['#ff0844', '#ffb199'],
-      ['#96fbc4', '#f9f586'],
-      ['#0093E9', '#80D0C7'],
-      ['#8EC5FC', '#E0C3FC'],
-      ['#FBAB7E', '#F7CE68']
-    ];
-    let hash = 0;
-    const str = id.toString();
-    for (let i = 0; i < str.length; i++) {
-      hash = str.charCodeAt(i) + ((hash << 5) - hash);
-    }
-    const pair = colors[Math.abs(hash) % colors.length];
-    return `linear-gradient(135deg, ${pair.join(', ')})`;
-  };
+/**
+ * Flashcard — Simplified card: Title, Description, Source.
+ */
+export default function Flashcard({ article }) {
+  const titleLen = article.title?.length || 0;
+  const titleSize = titleLen > 100 ? '22px' : titleLen > 60 ? '26px' : '32px';
 
-  const cardStyle = {
-    ...style,
-    background: getGradient(article.id),
-  };
+  const articleDate = article?.pubDate
+    ? new Date(article.pubDate).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })
+    : null;
 
-  const titleSize = article.title?.length > 80 ? '1.4rem' : article.title?.length > 50 ? '1.6rem' : '1.8rem';
-  const descSize = article.description?.length > 150 ? '0.85rem' : '1rem';
+  const biasInfo = (() => {
+    if (!article?.politicalLeanLabel) return null;
+    const l = article.politicalLeanLabel;
+    if (l === 'left-leaning') return { pos: '18%', text: 'Left-leaning' };
+    if (l === 'right-leaning') return { pos: '82%', text: 'Right-leaning' };
+    return { pos: '50%', text: 'Centrist' };
+  })();
+
+  const isSensational = article?.sensationalismLabel === 'sensational';
 
   return (
-    <div className="flashcard" style={cardStyle}>
-      <div className="card-content full-card">
-        <h3 className="card-title" style={{ fontSize: titleSize }}>{article.title}</h3>
-        {article.description && (
-          <p className="card-description" style={{ fontSize: descSize }}>{article.description}</p>
-        )}
-        
-        <div className="card-spacer"></div>
-
-        <div className="card-actions">
-          <a 
-            href={article.link} 
-            target="_blank" 
-            rel="noopener noreferrer" 
-            className="more-info-btn inverse"
-            style={{ 
-              pointerEvents: isTop ? 'auto' : 'none',
-              backgroundColor: article.biasScore > 0.5 ? '#60a5fa' : article.biasScore < -0.5 ? '#f87171' : 'rgba(255, 255, 255, 0.2)',
-              color: (article.biasScore > 0.5 || article.biasScore < -0.5) ? '#111' : '#fff',
-              borderColor: (article.biasScore > 0.5 || article.biasScore < -0.5) ? 'transparent' : 'rgba(255, 255, 255, 0.3)'
-            }}
-          >
-            More Info
-          </a>
-        </div>
+    <div className="center-card">
+      <div className="card-title-area">
+        <h1 className="card-headline" style={{ fontSize: titleSize }}>
+          {article.title || '—'}
+        </h1>
       </div>
+
+      <div className="card-desc-area">
+        <p className="card-body-text">
+          {article.description || 'No description available.'}
+        </p>
+      </div>
+
+      <div className="card-source-area">
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span className="card-source-label">{article.source || '—'}</span>
+          {articleDate && (
+            <>
+              <span style={{ color: 'var(--muted)', fontSize: '10px' }}>•</span>
+              <span className="card-source-label" style={{ color: 'var(--muted)' }}>{articleDate}</span>
+            </>
+          )}
+        </div>
+        {isSensational && (
+          <div className="sensational-badge">
+            <span className="badge-icon">⚠️</span>
+            <span className="badge-text">Sensational</span>
+            <div className="badge-tooltip">
+              This article may be using sensational or emotionally charged language.
+            </div>
+          </div>
+        )}
+      </div>
+
+      {biasInfo && (
+        <div className="card-bias-module">
+          <div className="bias-strip">
+            <div className="bias-marker" style={{ left: biasInfo.pos }}></div>
+          </div>
+          <div className="bias-ends">
+            <span>Left</span>
+            <span>Center</span>
+            <span>Right</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
